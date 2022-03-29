@@ -26,8 +26,8 @@ class Grid(object): # it may be worth subclassing LevelGenerator
         self.goal_pos = None
 
         # all non-wall/lava objects
-        self.objs = defaultdict(list, 
-                        {'m': [], 
+        self.objs = defaultdict(list,
+                        {'m': [],
                          '+': []})
 
         self.get_grid_obs()
@@ -125,7 +125,7 @@ class Grid(object): # it may be worth subclassing LevelGenerator
         ## add the staircases
         self.level.add_stair_down((self.goal_pos[1], self.goal_pos[0]))
         self.map[self.goal_pos[0]][self.goal_pos[1]] = '.'
-        self.level.add_stair_up((self.agent_start_pos[1], self.agent_start_pos[0]))
+        self.level._add_stair_up((self.agent_start_pos[1], self.agent_start_pos[0]))
         self.map[self.agent_start_pos[0]][self.agent_start_pos[1]] = '.'
         self.finalized = True
 

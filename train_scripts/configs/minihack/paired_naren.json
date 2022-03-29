@@ -3,7 +3,7 @@
     "env_name":["MiniHack-GoalLastAdv-WallsLavaMonsterDoor-15x15-v0"],
 
     "ued_algo": ["paired"],
-    "num_processes": [32],
+    "num_processes": [8],
     "num_env_steps": [1000000000],
     "num_steps": [256],
     "ppo_epoch": [5],
@@ -20,7 +20,7 @@
     "recurrent_arch": ["lstm"],
     "recurrent_agent": [true],
     "recurrent_adversary_env": [false],
-    "recurrent_hidden_size": [256],
+    "recurrent_hidden_size": [128],
 
     "log_dir": ["~/logs/paired"],
     "log_grad_norm": [true],

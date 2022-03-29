@@ -6,7 +6,7 @@ This codebase provides a PyTorch implementation of Protagonist Antagonist Induce
 
 Unsupervised environment design (UED) methods propose a curriculum of tasks or environment instances (*levels*) that aims to foster more sample efficient learning and robust policies. PAIRED performs unsupervised environment design (UED) using a three-player game among two student agents—the protagonist and antagonist—and an adversary. The antagonist is allied with the adversary, which proposes new environment instances (or *levels*) aiming to maximize the regret of the protagonist, estimated as the difference in returns achieved by the student agents across a batch of rollouts on proposed levels.
 
-PAIRED has a strong guarantee of robustness in that at Nash equilibrium, it provably induces a minimax regret policy for the protagonist, which means that the protagonist optimally trades off regret across all possible levels that can be proposed by the adversary. 
+PAIRED has a strong guarantee of robustness in that at Nash equilibrium, it provably induces a minimax regret policy for the protagonist, which means that the protagonist optimally trades off regret across all possible levels that can be proposed by the adversary.
 
 ### UED algorithms included
 
@@ -33,10 +33,16 @@ pip install -e .
 cd ..
 
 git clone https://github.com/facebookresearch/minihack.git
+git checkout v0.1.2
 cd minihack
 pip install -e .
 cd ..
 ```
+
+> Note: (2022) Might need to install six, TF 2.8.0, cmake and swig using method of your choosing
+> If having trouble building nle, follow
+> $ git clone https://github.com/facebookresearch/nle --recursive
+> $ pip install -e ".[dev]"
 
 ## Configuration
 Detailed descriptions of the various command-line arguments for the main training script, `train.py` can be found in [`arguments.py`](https://github.com/ucl-dark/paired/blob/master/arguments.py).
@@ -44,7 +50,7 @@ Detailed descriptions of the various command-line arguments for the main trainin
 ## Experiments
 ![MiniGrid benchmark results](docs/minigrid-benchmark.png)
 
-For convenience, configuration json files are provided to generate the commands to run the specific experimental settings featured in Dennis et al, 2020 and Samvelyan et al, 2021. To generate the command to launch 1 run of the experiment codified by the configuration file `config.json` in the local folder `train_scripts/configs`, simply run the following, and copy and paste the output into your command line. 
+For convenience, configuration json files are provided to generate the commands to run the specific experimental settings featured in Dennis et al, 2020 and Samvelyan et al, 2021. To generate the command to launch 1 run of the experiment codified by the configuration file `config.json` in the local folder `train_scripts/configs`, simply run the following, and copy and paste the output into your command line.
 ```shell
 python train_scripts/make_cmd.py --json config --num_trials 1
 ```
