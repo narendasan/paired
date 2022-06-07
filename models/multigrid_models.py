@@ -4,28 +4,28 @@ import torch.nn as nn
 import torch.nn.functional as F
 from gym.spaces import MultiDiscrete
 
-from .distributions import Categorical  
+from .distributions import Categorical
 from .common import *
 
 
 class MultigridNetwork(DeviceAwareModule):
     """
-    Actor-Critic module 
+    Actor-Critic module
     """
-    def __init__(self, 
-        observation_space, 
-        action_space, 
+    def __init__(self,
+        observation_space,
+        action_space,
         actor_fc_layers=(32, 32),
         value_fc_layers=(32, 32),
         conv_filters=16,
-        conv_kernel_size=3, 
+        conv_kernel_size=3,
         scalar_fc=5,
         scalar_dim=4,
         random_z_dim=0,
         xy_dim=0,
         recurrent_arch='lstm',
-        recurrent_hidden_size=256, 
-        random=False):        
+        recurrent_hidden_size=256,
+        random=False):
         super(MultigridNetwork, self).__init__()
 
         self.random = random
@@ -49,7 +49,7 @@ class MultigridNetwork(DeviceAwareModule):
         c = obs_shape[-3] # channel input dim
 
         self.image_conv = nn.Sequential(
-            Conv2d_tf(3, conv_filters, kernel_size=conv_kernel_size, stride=1, padding='VALID'),
+            Conv2d_tf(3, conv_filters, kernel_size=conv_kernel_size, stride=1, padding='valid'),
             nn.Flatten(),
             nn.ReLU()
         )
@@ -76,7 +76,7 @@ class MultigridNetwork(DeviceAwareModule):
         self.rnn = None
         if recurrent_arch:
             self.rnn = RNN(
-                input_size=self.preprocessed_input_size, 
+                input_size=self.preprocessed_input_size,
                 hidden_size=recurrent_hidden_size,
                 arch=recurrent_arch)
             self.base_output_size = recurrent_hidden_size
@@ -139,7 +139,7 @@ class MultigridNetwork(DeviceAwareModule):
         if self.xy_embed:
             x = one_hot(self.xy_dim, x, device=self.device)
             y = one_hot(self.xy_dim, y, device=self.device)
-            in_x = self.xy_embed(x) 
+            in_x = self.xy_embed(x)
             in_y = self.xy_embed(y)
         else:
             in_x = torch.tensor([], device=self.device)

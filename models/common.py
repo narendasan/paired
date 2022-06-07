@@ -54,7 +54,7 @@ class Conv2d_tf(nn.Conv2d):
     """
     def __init__(self, *args, **kwargs):
         super(Conv2d_tf, self).__init__(*args, **kwargs)
-        self.padding = kwargs.get("padding", "SAME")
+        self.padding = kwargs.get("padding", "same")
 
     def _compute_padding(self, input, dim):
         input_size = input.size(dim + 2)
@@ -69,7 +69,7 @@ class Conv2d_tf(nn.Conv2d):
         return additional_padding, total_padding
 
     def forward(self, input):
-        if self.padding == "VALID":
+        if self.padding == "valid":
             return F.conv2d(
                 input,
                 self.weight,
@@ -144,7 +144,7 @@ class RNN(nn.Module):
             hxs = tuple(h.squeeze(0) for h in hxs) if self.is_lstm else hxs.squeeze(0)
         else:
             # x is a (T, N, -1) tensor that has been flatten to (T * N, -1)
-            N = hxs[0].size(0) if self.is_lstm else hxs.size(0) 
+            N = hxs[0].size(0) if self.is_lstm else hxs.size(0)
             T = int(x.size(0) / N)
 
             # unflatten

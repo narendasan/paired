@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 class AdversarialRunner(object):
     """
-    Performs rollouts of an adversarial environment, given 
+    Performs rollouts of an adversarial environment, given
     protagonist (agent), antogonist (adversary_agent), and
     environment adversary (advesary_env)
     """
@@ -139,7 +139,7 @@ class AdversarialRunner(object):
         stats = {
             'mean_return': mean_return,
             'max_return': max_return,
-            'returns': rollout_returns 
+            'returns': rollout_returns
         }
 
         return stats
@@ -194,13 +194,13 @@ class AdversarialRunner(object):
             stats = self._get_env_stats_minihack(agent_info, adversary_agent_info)
         else:
             raise ValueError(f'Unsupported environment, {self.args.env_name}')
-            
+
         return stats
 
-    def agent_rollout(self, 
-                      agent, 
-                      num_steps, 
-                      update=False, 
+    def agent_rollout(self,
+                      agent,
+                      num_steps,
+                      update=False,
                       is_env=False,
                       fixed_seeds=None):
         args = self.args
@@ -215,7 +215,7 @@ class AdversarialRunner(object):
 
         # Initialize first observation
         agent.storage.copy_obs_to_index(obs,0)
-        
+
         mean_return = 0
 
         rollout_returns = [[] for _ in range(args.num_processes)]
@@ -279,15 +279,15 @@ class AdversarialRunner(object):
                  for info in infos])
 
             agent.insert(
-                obs, recurrent_hidden_states, 
-                action, action_log_prob, action_log_dist, 
-                value, reward, masks, bad_masks, 
+                obs, recurrent_hidden_states,
+                action, action_log_prob, action_log_dist,
+                value, reward, masks, bad_masks,
                 cliffhanger_masks=cliffhanger_masks)
 
         rollout_info = self._get_rollout_return_stats(rollout_returns)
 
         # Update non-env agent if required
-        if not is_env and update: 
+        if not is_env and update:
             with torch.no_grad():
                 obs_id = agent.storage.get_obs(-1)
                 next_value = agent.get_value(
@@ -350,7 +350,7 @@ class AdversarialRunner(object):
         if args.adv_clip_reward is not None:
             clip_max_abs = args.adv_clip_reward
             env_return = env_return.clamp(-clip_max_abs, clip_max_abs)
-        
+
         return env_return
 
     def run(self):
@@ -369,7 +369,7 @@ class AdversarialRunner(object):
 
         # Run protagonist agent episodes
         agent_info = self.agent_rollout(
-            agent=agent, 
+            agent=agent,
             num_steps=self.agent_rollout_steps,
             update=self.is_training)
 
@@ -377,8 +377,8 @@ class AdversarialRunner(object):
         adversary_agent_info = defaultdict(float)
         if self.is_paired:
             adversary_agent_info = self.agent_rollout(
-                agent=adversary_agent, 
-                num_steps=self.agent_rollout_steps, 
+                agent=adversary_agent,
+                num_steps=self.agent_rollout_steps,
                 update=self.is_training)
 
         env_return = self._compute_env_return(agent_info, adversary_agent_info)
@@ -455,7 +455,7 @@ class AdversarialRunner(object):
         if args.log_action_complexity:
             stats.update({
                 'agent_action_complexity': agent_info['action_complexity'],
-                'adversary_action_complexity': adversary_agent_info['action_complexity']  
-            }) 
+                'adversary_action_complexity': adversary_agent_info['action_complexity']
+            })
 
         return stats

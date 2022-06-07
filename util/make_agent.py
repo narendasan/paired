@@ -17,7 +17,7 @@ def model_for_multigrid_agent(
         adversary_random_z_dim = adversary_observation_space['random_z'].shape[0]
 
         model = MultigridNetwork(
-            observation_space=adversary_observation_space, 
+            observation_space=adversary_observation_space,
             action_space=adversary_action_space,
             conv_filters=128,
             scalar_fc=10,
@@ -28,11 +28,11 @@ def model_for_multigrid_agent(
     else:
         observation_space = env.observation_space
         action_space = env.action_space
-        num_directions = observation_space['direction'].high[0] + 1 
+        num_directions = observation_space['direction'].high[0] + 1
 
         model_constructor = MultigridNetwork
         model = model_constructor(
-            observation_space=observation_space, 
+            observation_space=observation_space,
             action_space=action_space,
             scalar_fc=5,
             scalar_dim=num_directions,
@@ -58,12 +58,13 @@ def model_for_minihack_agent(
                     observation_space=adversary_observation_space,
                     action_space=adversary_action_space,
                     recurrent_arch=recurrent_arch,
-                    scalar_fc=10,   
+                    scalar_fc=10,
                     scalar_dim=adversary_max_timestep,
                     random_z_dim=adversary_random_z_dim,
                     obs_key='image')
     else:
         observation_space = env.observation_space
+        print(observation_space)
         action_space = env.action_space
 
         model = NetHackAgentNet(
@@ -89,17 +90,18 @@ def model_for_env_agent(
     use_goal=False,
     num_goal_bins=1):
     assert agent_type in [
-        'agent', 
-        'adversary_agent', 
+        'agent',
+        'adversary_agent',
         'adversary_env']
-        
+
     if env_name.startswith('MultiGrid'):
         model = model_for_multigrid_agent(
-            env=env, 
+            env=env,
             agent_type=agent_type,
             recurrent_arch=recurrent_arch,
             recurrent_hidden_size=recurrent_hidden_size)
     elif env_name.startswith('MiniHack'):
+        print(env)
         model = model_for_minihack_agent(
             env=env,
             agent_type=agent_type,

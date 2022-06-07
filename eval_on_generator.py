@@ -6,6 +6,7 @@ import argparse
 import fnmatch
 import re
 from collections import defaultdict
+from envs.multigrid import adversarial
 
 import numpy as np
 import torch
@@ -25,7 +26,7 @@ from gym.envs.registration import make as minihack_gym_make
 from envs.multigrid.maze import *
 from envs.multigrid.crossing import *
 from envs.multigrid.fourrooms import *
-from envs.wrappers import VecMonitor, VecPreprocessImageWrapper, ParallelAdversarialVecEnv
+from envs.wrappers import VecMonitor, VecNormalize, VecPreprocessImageWrapper, ParallelAdversarialVecEnv
 from util import DotDict, str2bool, make_agent, create_parallel_env
 from arguments import parser
 
@@ -128,7 +129,6 @@ def parse_args():
 
 	return parser.parse_args()
 
-
 class Evaluator(object):
 	def __init__(self, env_names, num_processes, num_episodes=10, device='cpu', **kwargs):
 		self.kwargs = kwargs # kwargs for env wrappers
@@ -154,16 +154,12 @@ class Evaluator(object):
 		return kwargs
 
 	@staticmethod
-	def make_env(env_name, **kwargs):
-		is_multigrid = env_name.startswith('MultiGrid')
-		is_minihack = env_name.startswith('MiniHack')
+	def make_env(args):
+		env_kwargs = {'seed': args.seed,
+					  'fixed_environment': True}
 
-		if is_minihack:
-			env_kwargs = Evaluator._get_default_env_kwargs(env_name)
-			env = minihack_gym_make(env_name,
-					**Evaluator._get_default_env_kwargs(env_name))
-		else:
-			env = gym_make(env_name)
+
+		env = gym_make(args.env_name, **env_kwargs)
 
 		return env
 
@@ -190,17 +186,45 @@ class Evaluator(object):
 
 		return venv
 
-	def _init_parallel_envs(self, env_names, num_processes, device=None, **kwargs):
-		self.env_names = env_names
+	def _init_parallel_envs(self, env_kind, num_envs, num_processes, device=None, **kwargs):
+		self.env_names = [f"{env_kind}_Gen_{i}" for i in range(num_envs)]
 		self.num_processes = num_processes
 		self.device = device
 		self.venv = {env_name:None for env_name in env_names}
 
 		make_fn = []
 		for env_name in env_names:
-			make_fn = [lambda: Evaluator.make_env(env_name, **kwargs)]*self.num_processes
-			venv = ParallelAdversarialVecEnv(make_fn, adversary=False, is_eval=True)
-			venv = Evaluator.wrap_venv(venv, env_name, device=device)
+			is_multigrid = env_name.startswith('MultiGrid')
+			is_minihack = env_name.startswith('MiniHack')
+
+			make_fn = [lambda: Evaluator.make_env(**kwargs)]*self.num_processes
+
+			venv = ParallelAdversarialVecEnv([make_fn]*args.num_processes, adversary=True, is_eval=True)
+			venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
+			venv = VecNormalize(venv=venv, ob=False, ret=args.normalize_returns)
+
+			obs_key = None
+			scale = None
+			transpose_order = None
+			if is_multigrid:
+				obs_key = 'image'
+				scale = 10.0
+				transpose_order = [2,0,1] # Channels first
+
+			elif is_minihack:
+				ued_venv = VecPreprocessImageWrapper(venv=venv)
+
+			venv = VecPreprocessImageWrapper(venv=venv, obs_key=obs_key,
+				transpose_order=transpose_order, scale=scale)
+
+			if is_multigrid:
+				ued_venv = venv
+
+			if args.singleton_env:
+				seeds = [args.seed]*args.num_processes
+			else:
+				seeds = [i for i in range(args.num_processes)]
+			venv.set_seed(seeds)
 			self.venv[env_name] = venv
 
 	def close(self):
@@ -364,6 +388,7 @@ if __name__ == '__main__':
 
 			# Load the agent
 			agent = make_agent(name='agent', env=dummy_venv, args=xpid_flags, device=device)
+			adversarial_env = make_agent(name="adversary_env", env=dummy_venv, args=xpid_flags, device=device)
 
 			try:
 				checkpoint = torch.load(checkpoint_path, map_location='cpu')
