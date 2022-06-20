@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import random 
+import random
 
 class PPO():
     """
@@ -21,7 +21,7 @@ class PPO():
                  clip_value_loss=True,
                  log_grad_norm=False):
 
-        self.actor_critic = actor_critic    
+        self.actor_critic = actor_critic
 
         self.clip_param = clip_param
         self.ppo_epoch = ppo_epoch
@@ -46,7 +46,7 @@ class PPO():
         total_norm = total_norm ** (1. / 2)
         return total_norm
 
-    def update(self, rollouts):
+    def update(self, rollouts, no_grad=False):
         if rollouts.use_popart:
             value_preds = rollouts.denorm_value_preds
         else:
@@ -77,11 +77,11 @@ class PPO():
                 obs_batch, recurrent_hidden_states_batch, actions_batch, \
                 value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, \
                         adv_targ = sample
-                
+
                 values, action_log_probs, dist_entropy, _ = self.actor_critic.evaluate_actions(
                     obs_batch, recurrent_hidden_states_batch, masks_batch,
                     actions_batch)
-                    
+
                 ratio = torch.exp(action_log_probs -
                                   old_action_log_probs_batch)
                 surr1 = ratio * adv_targ
@@ -90,7 +90,8 @@ class PPO():
                 action_loss = -torch.min(surr1, surr2).mean()
 
                 if rollouts.use_popart:
-                    self.actor_critic.popart.update(return_batch)
+                    if not no_grad:
+                        self.actor_critic.popart.update(return_batch)
                     return_batch = self.actor_critic.popart.normalize(return_batch)
 
                 if self.clip_value_loss:
@@ -104,13 +105,15 @@ class PPO():
                 else:
                     value_loss = F.smooth_l1_loss(values, return_batch)
 
-                self.optimizer.zero_grad()
+                if not no_grad:
+                    self.optimizer.zero_grad()
                 if isinstance(dist_entropy, list):
                     loss = (value_loss * self.value_loss_coef + action_loss - (dist_entropy[0]+dist_entropy[1]) * self.entropy_coef)
                 else:
                     loss = (value_loss*self.value_loss_coef + action_loss - dist_entropy*self.entropy_coef)
 
-                loss.backward()
+                if not no_grad:
+                    loss.backward()
 
                 if self.log_grad_norm:
                     grad_norms.append(self._grad_norm())
@@ -118,9 +121,9 @@ class PPO():
                 if self.max_grad_norm is not None and self.max_grad_norm > 0:
                     nn.utils.clip_grad_norm_(self.actor_critic.parameters(),
                                             self.max_grad_norm)
-                    
+
                 self.optimizer.step()
-                                
+
                 value_loss_epoch += value_loss.item()
                 action_loss_epoch += action_loss.item()
                 if isinstance(dist_entropy, list):

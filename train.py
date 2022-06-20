@@ -28,7 +28,7 @@ if __name__ == '__main__':
     os.environ["OMP_NUM_THREADS"] = "1"
 
     args = parser.parse_args()
-    
+
     # === Configure logging ===
     if args.xpid is None:
         args.xpid = "lr-%s" % time.strftime("%Y%m%d-%H%M%S")
@@ -84,8 +84,8 @@ if __name__ == '__main__':
         agent=agent,
         venv=venv,
         ued_venv=ued_venv,
-        adversary_agent=adversary_agent, 
-        adversary_env=adversary_env, 
+        adversary_agent=adversary_agent,
+        adversary_env=adversary_env,
         train=True,
         device=device)
 
@@ -97,13 +97,16 @@ if __name__ == '__main__':
     checkpoint_path = os.path.expandvars(
         os.path.expanduser("%s/%s/%s" % (log_dir, args.xpid, "model.tar"))
     )
+    adversary_env_ckpt_path = os.path.expandvars(
+        os.path.expanduser("%s/%s/%s" % (log_dir, args.xpid, "adv_env_model.tar"))
+    )
 
     def checkpoint(index=None):
         if args.disable_checkpoint:
             return
-        safe_checkpoint({'runner_state_dict': train_runner.state_dict()}, 
+        safe_checkpoint({'runner_state_dict': train_runner.state_dict()},
                         checkpoint_path,
-                        index=index, 
+                        index=index,
                         archive_interval=args.archive_interval)
         logging.info("Saved checkpoint to %s", checkpoint_path)
 
@@ -121,8 +124,8 @@ if __name__ == '__main__':
     if args.test_env_names:
         test_envs = args.test_env_names.split(',')
         evaluator = Evaluator(
-            test_envs, 
-            num_processes=args.test_num_processes, 
+            test_envs,
+            num_processes=args.test_num_processes,
             num_episodes=args.test_num_episodes,
             device=device)
 
@@ -163,14 +166,16 @@ if __name__ == '__main__':
             last_checkpoint_time = timer()
         if j == num_updates - 1 or \
             (args.save_interval > 0 and timer() - last_checkpoint_time > args.save_interval * 60):
-            checkpoint(train_runner.num_updates)
-            last_checkpoint_time = timer()
-            logging.info(f"\nSaved checkpoint after update {j + 1}")
+            #checkpoint(train_runner.num_updates)
+            #last_checkpoint_time = timer()
+            #logging.info(f"\nSaved checkpoint after update {j + 1}")
+            pass
         elif train_runner.num_updates > 0 and args.archive_interval > 0 \
             and train_runner.num_updates % args.archive_interval == 0:
-            checkpoint(train_runner.num_updates)
-            last_checkpoint_time = timer()
-            logging.info(f"\nSaved checkpoint after update {j + 1}")
+            #checkpoint(train_runner.num_updates)
+            #ast_checkpoint_time = timer()
+            #logging.info(f"\nSaved checkpoint after update {j + 1}")
+            pass
 
         if save_screenshot:
             venv.reset_agent()

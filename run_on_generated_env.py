@@ -19,7 +19,7 @@ from envs.multigrid import *
 from envs.multigrid.adversarial import *
 from envs.minihack.adversarial import *
 
-from envs.runners.adversarial_runner import AdversarialRunner
+from envs.runners.adversarial_env_runner import AdversarialEnvRunner
 from util import make_agent, FileWriter, safe_checkpoint, create_parallel_env
 from eval import Evaluator
 
@@ -64,12 +64,7 @@ if __name__ == '__main__':
     is_paired = args.ued_algo in ['paired', 'flexible_paired']
 
     agent = make_agent(name='agent', env=venv, args=args, device=device)
-    adversary_agent, adversary_env = None, None
-    if is_paired:
-        adversary_agent = make_agent(name='adversary_agent', env=venv, args=args, device=device)
-
-    if is_training_env:
-        adversary_env = make_agent(name='adversary_env', env=venv, args=args, device=device)
+    adversary_env = make_agent(name='adversary_env', env=venv, args=args, device=device)
 
     # === Signal handler ===
     def signal_handler(sig, frame):
@@ -79,12 +74,11 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
 
     # === Create runner ===
-    train_runner = AdversarialRunner(
+    train_runner = AdversarialEnvRunner(
         args=args,
         agent=agent,
         venv=venv,
         ued_venv=ued_venv,
-        adversary_agent=adversary_agent,
         adversary_env=adversary_env,
         train=False,
         device=device)
@@ -102,7 +96,13 @@ if __name__ == '__main__':
     )
 
     def checkpoint(index=None):
-        return
+        if args.disable_checkpoint:
+            return
+        safe_checkpoint({'runner_state_dict': train_runner.state_dict()},
+                        checkpoint_path,
+                        index=index,
+                        archive_interval=args.archive_interval)
+        logging.info("Saved checkpoint to %s", checkpoint_path)
 
 
     # === Load checkpoint ===
@@ -111,7 +111,17 @@ if __name__ == '__main__':
         last_logged_update_at_restart = filewriter.latest_tick() # ticks are 0-indexed updates
         train_runner.load_state_dict(checkpoint_states['runner_state_dict'])
         initial_update_count = train_runner.num_updates
-        logging.info(f"Loading checkpoint {initial_update_count} updates\n") # 0-indexed next update
+        logging.info(f"Resuming preempted job after {initial_update_count} updates\n") # 0-indexed next update
+
+    # Set up Evaluator
+    evaluator = None
+    if args.test_env_names:
+        test_envs = args.test_env_names.split(',')
+        evaluator = Evaluator(
+            test_envs,
+            num_processes=args.test_num_processes,
+            num_episodes=args.test_num_episodes,
+            device=device)
 
     # === Train ===
     update_start_time = timer()
@@ -131,12 +141,33 @@ if __name__ == '__main__':
 
         if log:
             # Eval
+            test_stats = {}
+            if evaluator is not None and (j % args.test_interval == 0 or j == num_updates - 1):
+                test_stats = evaluator.evaluate(train_runner.agents['agent'])
+                stats.update(test_stats)
+            else:
+                stats.update({k: None for k in evaluator.stats_keys})
+
             update_end_time = timer()
             num_incremental_updates = 1 if j == 0 else args.log_interval
             sps = num_incremental_updates*(args.num_processes * args.num_steps) / (update_end_time - update_start_time)
             update_start_time = update_end_time
             stats.update({'sps': sps})
+            stats.update(test_stats)
             log_stats(stats)
+
+        if last_checkpoint_time is None:
+            last_checkpoint_time = timer()
+        if j == num_updates - 1 or \
+            (args.save_interval > 0 and timer() - last_checkpoint_time > args.save_interval * 60):
+            checkpoint(train_runner.num_updates)
+            last_checkpoint_time = timer()
+            logging.info(f"\nSaved checkpoint after update {j + 1}")
+        elif train_runner.num_updates > 0 and args.archive_interval > 0 \
+            and train_runner.num_updates % args.archive_interval == 0:
+            checkpoint(train_runner.num_updates)
+            last_checkpoint_time = timer()
+            logging.info(f"\nSaved checkpoint after update {j + 1}")
 
         if save_screenshot:
             venv.reset_agent()
@@ -155,4 +186,5 @@ if __name__ == '__main__':
                 with open(os.path.join(screenshot_dir, f'update_{j}.des'), 'w+') as fout:
                     fout.write(venv.get_des_file())
 
+    evaluator.close()
     venv.close()

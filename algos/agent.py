@@ -3,8 +3,8 @@ class ACAgent(object):
 		self.algo = algo
 		self.storage = storage
 
-	def update(self):
-		info = self.algo.update(self.storage)
+	def update(self, no_grad=False):
+		info = self.algo.update(self.storage, no_grad=no_grad)
 		self.storage.after_update()
 
 		return info

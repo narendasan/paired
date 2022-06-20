@@ -22,7 +22,7 @@
     "recurrent_adversary_env": [false],
     "recurrent_hidden_size": [128],
 
-    "log_dir": ["~/logs/paired"],
+    "log_dir": ["/workspace/logs/paired"],
     "log_grad_norm": [true],
     "log_action_complexity": [true],
     "log_interval": [10],
